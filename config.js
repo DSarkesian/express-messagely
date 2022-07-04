@@ -6,9 +6,14 @@
 
 require("dotenv").config();
 
+// const DB_URI = (process.env.NODE_ENV === "test")
+//     ? "postgresql://kungpaodao:foofoo@localhost/messagely_test"
+//     : "postgresql://kungpaodao:foofoo@localhost/messagely";
+
+
 const DB_URI = (process.env.NODE_ENV === "test")
-    ? "postgresql://kungpaodao:foofoo@localhost/messagely_test"
-    : "postgresql://kungpaodao:foofoo@localhost/messagely";
+    ? "postgresql:///messagely_test"
+    : "postgresql:///messagely";
 
 const SECRET_KEY = process.env.SECRET_KEY || "secret";
 
