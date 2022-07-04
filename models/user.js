@@ -1,6 +1,8 @@
 "use strict";
-const { DB_URI } = require("../config");
-const {BCRYPT_WORK_FACTOR} = require("./config")
+const db = require("../db");
+const BCRYPT_WORK_FACTOR = require("../config");
+const Message = require("./message");
+const bcrypt = require("bcrypt");
 
 /** User of the site. */
 
@@ -13,11 +15,11 @@ class User {
   static async register({ username, password, first_name, last_name, phone }) {
     const hashedPassword = await bcrypt.hash(password, BCRYPT_WORK_FACTOR)
     const result = await db.query(
-      `INSERT INTO users (username,password,first_name, last_name,phone)
+      `INSERT INTO users (username, password, first_name, last_name, phone)
         VALUES
         ($1,$2,$3,$4,$5)
         RETURNING username`,
-        [username,hashedPassword,first_name, last_name, phone]);
+      [username, hashedPassword, first_name, last_name, phone]);
     return new User(result.rows[0])
   }
 
@@ -32,7 +34,7 @@ class User {
       [username]);
     const user = result.rows[0]
 
-      return (await bcrypt.compare(password, user.password) === true)
+    return (await bcrypt.compare(password, user.password) === true)
 
   }
 
@@ -46,15 +48,13 @@ class User {
 
   static async all() {
     const results = await db.query(
-                          `SELECT
-                          username,
-                          password,
-                          first_name,
-                          last_name,phone
-                          FROM users
-                          ORDER BY last_name, first_name`
-                          );
-                          return results.rows.map(u => new User(u));
+      `SELECT username,
+        first_name,
+        last_name
+      FROM users
+      ORDER BY last_name, first_name`
+    );
+    return results.rows.map(u => new User(u));
   }
 
   /** Get: get user by username
@@ -67,7 +67,21 @@ class User {
    *          last_login_at } */
 
   static async get(username) {
+    const result = await db.query(
+      `SELECT username, 
+        first_name,
+        last_name,
+        phone,
+        join_at,
+        last_login_at
+      FROM users
+      WHERE username = $1`, 
+      [username]
+    );
+
+    return new User(result.rows[0]);
   }
+
 
   /** Return messages from this user.
    *
@@ -78,6 +92,18 @@ class User {
    */
 
   static async messagesFrom(username) {
+    const results = await db.query(
+      `SELECT messages.id,
+        messages.to_user,
+        messages.body,
+        messages.sent_at,
+        messages.read_at
+      FROM messages
+        JOIN users ON messages.from_username = $1`,
+        [username]
+    );
+    const messages = results.rows.map(async id => await Message.get(id));
+    return messages;
   }
 
   /** Return messages to this user.
@@ -89,6 +115,18 @@ class User {
    */
 
   static async messagesTo(username) {
+    const results = await db.query(
+      `SELECT messages.id,
+        messages.from_user,
+        messages.body,
+        messages.sent_at,
+        messages.read_at
+      FROM messages
+        JOIN users ON messages.to_username = $1`,
+        [username]
+    );
+    const messages = results.rows.map(async id => await Message.get(id));
+    return messages;
   }
 }
 
