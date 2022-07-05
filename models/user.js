@@ -3,6 +3,7 @@ const db = require("../db");
 const BCRYPT_WORK_FACTOR = require("../config");
 const Message = require("./message");
 const bcrypt = require("bcrypt");
+const { UnauthorizedError } = require("../expressError");
 
 /** User of the site. */
 
@@ -22,13 +23,11 @@ class User {
         first_name,
         last_name,
         phone,
-        join_at,
-        last_login_at)
+        join_at)
         VALUES
-        ($1,$2,$3,$4,$5, current_timestamp, current_timestamp)
+        ($1,$2,$3,$4,$5, current_timestamp)
         RETURNING username,password,first_name,last_name,phone`,
       [username, hashedPassword, first_name, last_name, phone]);
-      //TODO: not loging_in user on register
 
     return result.rows[0]
   }
@@ -43,19 +42,24 @@ class User {
       WHERE username = $1`,
       [username]);
     const user = result.rows[0];
-    //TODO: check that user exists
+    if(user){
+      return await bcrypt.compare(password, user.password) === true;
+    }
+    throw new UnauthorizedError();
 
-    return await bcrypt.compare(password, user.password) === true;
   }
 
   /** Update last_login_at for user */
 
   static async updateLoginTimestamp(username) {
-    const resp = await db.query(
+    const result = await db.query(
       `UPDATE users
         SET last_login_at = current_timestamp
       WHERE username = $1`, [username]);
-      //TODO: check if user exists
+    const user = result.rows[0];
+    if(!user){
+      throw new UnauthorizedError();
+      }
 
   }
 
@@ -94,9 +98,12 @@ class User {
       WHERE username = $1`,
       [username]
     );
-    //TODO: check if user exists
+    const user = result.rows[0];
+    if(!user){
+      throw new UnauthorizedError();
+      }
 
-    return result.rows[0];
+    return user
   }
 
 
