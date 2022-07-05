@@ -28,6 +28,7 @@ class User {
         ($1,$2,$3,$4,$5, current_timestamp, current_timestamp)
         RETURNING username,password,first_name,last_name,phone`,
       [username, hashedPassword, first_name, last_name, phone]);
+      //TODO: not loging_in user on register
 
     return result.rows[0]
   }
@@ -41,7 +42,8 @@ class User {
       FROM users
       WHERE username = $1`,
       [username]);
-    const user = result.rows[0]
+    const user = result.rows[0];
+    //TODO: check that user exists
 
     return await bcrypt.compare(password, user.password) === true;
   }
@@ -53,6 +55,7 @@ class User {
       `UPDATE users
         SET last_login_at = current_timestamp
       WHERE username = $1`, [username]);
+      //TODO: check if user exists
 
   }
 
@@ -91,6 +94,7 @@ class User {
       WHERE username = $1`,
       [username]
     );
+    //TODO: check if user exists
 
     return result.rows[0];
   }
@@ -119,10 +123,10 @@ class User {
         JOIN users ON messages.to_username = users.username
       WHERE messages.from_username = $1`, [username]
     );
-    
+
     const messages = results.rows.map(
       row => row = {
-        id: row.id, 
+        id: row.id,
         body: row.body,
         sent_at: row.sent_at,
         read_at: row.read_at,
@@ -133,8 +137,8 @@ class User {
           phone: row.phone
           }
         });
-        
-    return messages
+
+    return messages;
   }
 
   /** Return messages to this user.
@@ -160,10 +164,10 @@ class User {
         JOIN users ON messages.from_username = users.username
       WHERE messages.to_username = $1`, [username]
     );
-    
+
     const messages = results.rows.map(
       row => row = {
-        id: row.id, 
+        id: row.id,
         body: row.body,
         sent_at: row.sent_at,
         read_at: row.read_at,
