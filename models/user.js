@@ -23,9 +23,10 @@ class User {
         first_name,
         last_name,
         phone,
-        join_at)
+        join_at,
+        last_login_at)
         VALUES
-        ($1,$2,$3,$4,$5, current_timestamp)
+        ($1,$2,$3,$4,$5, current_timestamp, current_timestamp)
         RETURNING username,password,first_name,last_name,phone`,
       [username, hashedPassword, first_name, last_name, phone]);
 
@@ -40,13 +41,17 @@ class User {
       `SELECT password, username
       FROM users
       WHERE username = $1`,
-      [username]);
-    const user = result.rows[0];
-    if(user){
-      return await bcrypt.compare(password, user.password) === true;
-    }
-    throw new UnauthorizedError();
+      [username]
+    );
 
+    const user = result.rows[0];
+
+    if (!user){
+      return false;
+    }else{
+      const auth = await bcrypt.compare(password, user.password);
+      return auth;
+    }
   }
 
   /** Update last_login_at for user */
@@ -55,11 +60,13 @@ class User {
     const result = await db.query(
       `UPDATE users
         SET last_login_at = current_timestamp
-      WHERE username = $1`, [username]);
+      WHERE username = $1
+      RETURNING username`, [username]);
     const user = result.rows[0];
+
     if(!user){
       throw new UnauthorizedError();
-      }
+    }
 
   }
 
